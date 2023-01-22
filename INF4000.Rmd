@@ -1,0 +1,225 @@
+---
+title: "Art Map"
+author: "Yuqi Gao"
+date: "2023-01-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages("osmdata")
+```
+
+```{r}
+library(osmdata)
+bbx <- getbb("New York City, NY")
+```
+```{r}
+min_lon <- -74.04689; max_lon <- -73.72876
+min_lat <- 40.59857; max_lat <- 40.78692
+bbx <- rbind(x=c(min_lon,max_lon),y=c(min_lat,max_lat))
+colnames(bbx) <- c("min","max")
+```
+
+
+```{r}
+highways <- bbx %>% opq() %>% add_osm_feature(key = "highway",
+                                              value = c("motorway", "trunk", "primary", "secondary", "tertiary", "motorway_link", "trunk_link", "primary_link", "secondary_link", "tertiary_link")) %>% osmdata_sf()
+```
+
+```{r}
+highways_pri <- bbx %>% opq() %>% add_osm_feature(key = "highway",
+                                              value = c("primary", "secondary")) %>% osmdata_sf()
+```
+
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+require(sf)
+ggplot() +
+  geom_sf(data = highways$osm_lines,
+          aes(color=highway),
+          size = .4,
+          alpha = .65)+
+  theme_void()
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = highways_pri$osm_lines,
+          aes(color=highway),
+          size = .4,
+          alpha = .65)+
+  theme_void()
+```
+
+
+```{r}
+streets <- bbx %>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("residential", "living_street",
+                            "service","unclassified",
+                            "pedestrian", "footway",
+                            "track","path")) %>%
+  osmdata_sf()
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = streets$osm_lines,
+          aes(color=highway),
+          size = .4,
+          alpha = .65)+
+  theme_void()
+```
+
+
+```{r}
+color_roads <- rgb(0.42,0.449,0.488)
+ggplot() +
+  geom_sf(data = streets$osm_lines,
+          col = color_roads,
+          size = .4,
+          alpha = .65) +
+  geom_sf(data = highways$osm_lines,
+          col = color_roads,
+          size = .6,
+          alpha = .8)+
+  coord_sf(xlim = c(min_lon,max_lon),
+           ylim = c(min_lat,max_lat),
+         expand = FALSE)+
+  theme(legend.position = F) + theme_void()
+```
+
+```{r}
+library(sf)
+```
+
+
+```{r}
+#install.packages("tigris")
+library(dplyr)
+library(tigris)
+require(tigris)
+counties_NY <- counties(state="NY",cb=T,class="sf",)
+counties_NJ <- counties(state="NJ",cb=T,class="sf",)
+counties_join <- bind_rows(counties_NY, counties_NJ)
+counties_join <- st_crop(counties_join,
+                       xmin=min_lon,xmax=max_lon,
+                       ymin=min_lat,ymax=max_lat)
+ggplot(counties_join) + 
+  geom_sf(fill="gray", color=NA)+
+  coord_sf(xlim = c(min(bbx[1,]), max(bbx[1,])), 
+         ylim = c(min(bbx[2,]), max(bbx[2,])),
+         expand = FALSE)+
+  theme(legend.position = F) + theme_void()
+```
+
+```{r include=FALSE}
+get_water <- function(county_GEOID){
+  area_water("NY", county_GEOID, class = "sf")
+}
+get_water_2 <- function(county_GEOID){
+  area_water("NJ", county_GEOID, class = "sf")
+}
+
+water_NY <- do.call(rbind, 
+                 lapply(counties_NY$COUNTYFP,get_water))
+water_NJ <- do.call(rbind, 
+                 lapply(counties_NJ$COUNTYFP,get_water_2))
+
+water_join <- bind_rows(water_NY, water_NJ)
+
+water_join <- st_crop(water_join,
+                 xmin=min_lon,xmax=max_lon,
+                 ymin=min_lat,ymax=max_lat)
+```
+
+```{r}
+ggplot() + 
+  geom_sf(data=counties_join, color=NA)+
+  geom_sf(data=water_join,
+          inherit.aes = F,
+          col="red")+
+  coord_sf(xlim = c(min(bbx[1,]), max(bbx[1,])), 
+         ylim = c(min(bbx[2,]), max(bbx[2,])),
+         expand = FALSE)+
+  theme(legend.position = F) + theme_void()
+```
+
+```{r}
+st_erase <- function(x, y) {
+  st_difference(x, st_union(y))
+}
+sf_use_s2(FALSE)
+counties_join <- st_erase(st_union(counties_join),water_join)
+```
+
+```{r}
+ggplot() + 
+  geom_sf(data=counties_join,
+          color=NA)+
+  coord_sf(xlim = c(min(bbx[1,]), max(bbx[1,])), 
+         ylim = c(min(bbx[2,]), max(bbx[2,])),
+         expand = FALSE)+
+  theme(legend.position = F) + theme_void()
+```
+
+```{r}
+ggplot() + 
+  geom_sf(data=counties_join,
+          inherit.aes= FALSE,
+          color=NA,fill="black")+
+  coord_sf(xlim = c(min(bbx[1,]), max(bbx[1,])), 
+         ylim = c(min(bbx[2,]), max(bbx[2,])),
+         expand = FALSE)+
+  theme(legend.position = F) + theme_void()+
+  theme(panel.background=
+          element_rect(fill = "#fcc41c"))+
+  ggtitle("Dark + Yellow theme")
+```
+
+```{r}
+final_map <- ggplot() + 
+  geom_sf(data=counties_join,
+          inherit.aes= FALSE,
+          color=NA,fill="black")+
+  geom_sf(data = streets$osm_lines,
+          inherit.aes = FALSE,
+          color="#6e6e6e",
+          size = .4,
+          alpha = .65) +
+  geom_sf(data = highways$osm_lines,
+          inherit.aes = FALSE,
+          color="#919191",
+          size = .6,
+          alpha = .65) +
+  geom_sf(data = highways_pri$osm_lines,
+          inherit.aes = FALSE,
+          color="#d60606",
+          size = .5,
+          alpha = .8)+
+  coord_sf(xlim = c(min(bbx[1,]), max(bbx[1,])), 
+           ylim = c(min(bbx[2,]), max(bbx[2,])),
+           expand = FALSE) +
+  theme(legend.position = F) + theme_void()+
+  theme(panel.background=
+          element_rect(fill = "#fcc41c"))
+final_map
+```
+
+```{r}
+ggsave(final_map, 
+       filename = "ny_map_art.png",
+       width = 20, 
+       height = 20, 
+       units = "in",
+       dpi = 500,
+       type = "cairo")
+```
+
