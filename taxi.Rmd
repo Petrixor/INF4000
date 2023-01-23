@@ -1,0 +1,56 @@
+---
+title: "Taxi"
+author: "Yuqi Gao"
+date: "2023-01-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE}
+#install.packages("arrow")
+```
+
+
+```{r warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(arrow)
+```
+
+```{r}
+taxi_19_1 <- read_parquet("yellow_tripdata_2019-01.parquet", as_data_frame = TRUE)
+taxi_19_2 <- read_parquet("yellow_tripdata_2019-02.parquet", as_data_frame = TRUE)
+taxi_19_3 <- read_parquet("yellow_tripdata_2019-03.parquet", as_data_frame = TRUE)
+taxi_19_4 <- read_parquet("yellow_tripdata_2019-04.parquet", as_data_frame = TRUE)
+taxi_19_5 <- read_parquet("yellow_tripdata_2019-05.parquet", as_data_frame = TRUE)
+taxi_19_6 <- read_parquet("yellow_tripdata_2019-06.parquet", as_data_frame = TRUE)
+taxi_19_7 <- read_parquet("yellow_tripdata_2019-07.parquet", as_data_frame = TRUE)
+taxi_19_8 <- read_parquet("yellow_tripdata_2019-08.parquet", as_data_frame = TRUE)
+taxi_19_9 <- read_parquet("yellow_tripdata_2019-09.parquet", as_data_frame = TRUE)
+taxi_19_10 <- read_parquet("yellow_tripdata_2019-10.parquet", as_data_frame = TRUE)
+taxi_19_11 <- read_parquet("yellow_tripdata_2019-11.parquet", as_data_frame = TRUE)
+taxi_19_12 <- read_parquet("yellow_tripdata_2019-12.parquet", as_data_frame = TRUE)
+
+```
+
+```{r}
+taxi_22_1 <- read_parquet("yellow_tripdata_2022-01.parquet", as_data_frame = TRUE)
+taxi_22_2 <- read_parquet("yellow_tripdata_2022-02.parquet", as_data_frame = TRUE)
+taxi_22_3 <- read_parquet("yellow_tripdata_2022-03.parquet", as_data_frame = TRUE)
+taxi_22_4 <- read_parquet("yellow_tripdata_2022-04.parquet", as_data_frame = TRUE)
+taxi_22_5 <- read_parquet("yellow_tripdata_2022-05.parquet", as_data_frame = TRUE)
+taxi_22_6 <- read_parquet("yellow_tripdata_2022-06.parquet", as_data_frame = TRUE)
+taxi_22_7 <- read_parquet("yellow_tripdata_2022-07.parquet", as_data_frame = TRUE)
+taxi_22_8 <- read_parquet("yellow_tripdata_2022-08.parquet", as_data_frame = TRUE)
+taxi_22_9 <- read_parquet("yellow_tripdata_2022-09.parquet", as_data_frame = TRUE)
+taxi_22_10 <- read_parquet("yellow_tripdata_2022-10.parquet", as_data_frame = TRUE)
+
+```
+
+```{r}
+location_list <- read.csv("taxi+_zone_lookup.csv")
+```
+

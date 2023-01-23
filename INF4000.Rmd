@@ -35,10 +35,13 @@ highways_pri <- bbx %>% opq() %>% add_osm_feature(key = "highway",
                                               value = c("primary", "secondary")) %>% osmdata_sf()
 ```
 
-
 ```{r}
 #install.packages("ggplot2")
 library(ggplot2)
+```
+
+
+```{r}
 require(sf)
 ggplot() +
   geom_sf(data = highways$osm_lines,
@@ -161,6 +164,13 @@ counties_join <- st_erase(st_union(counties_join),water_join)
 ```
 
 ```{r}
+#install.packages("viridis")
+library(viridis)
+library(colorspace)
+```
+
+
+```{r}
 ggplot() + 
   geom_sf(data=counties_join,
           color=NA)+
@@ -174,13 +184,13 @@ ggplot() +
 ggplot() + 
   geom_sf(data=counties_join,
           inherit.aes= FALSE,
-          color=NA,fill="black")+
+          color=NA,fill="#a9fce6")+
   coord_sf(xlim = c(min(bbx[1,]), max(bbx[1,])), 
          ylim = c(min(bbx[2,]), max(bbx[2,])),
          expand = FALSE)+
   theme(legend.position = F) + theme_void()+
   theme(panel.background=
-          element_rect(fill = "#fcc41c"))+
+          element_rect(fill = "#102e73"))+
   ggtitle("Dark + Yellow theme")
 ```
 
@@ -188,38 +198,41 @@ ggplot() +
 final_map <- ggplot() + 
   geom_sf(data=counties_join,
           inherit.aes= FALSE,
-          color=NA,fill="black")+
+          color=NA,fill="#a9fce6")+
   geom_sf(data = streets$osm_lines,
           inherit.aes = FALSE,
-          color="#6e6e6e",
+          color="#38a18e",
           size = .4,
           alpha = .65) +
   geom_sf(data = highways$osm_lines,
           inherit.aes = FALSE,
-          color="#919191",
+          color="#17358f",
           size = .6,
           alpha = .65) +
   geom_sf(data = highways_pri$osm_lines,
           inherit.aes = FALSE,
-          color="#d60606",
-          size = .5,
-          alpha = .8)+
+          color="#ffd500",
+          size = .8,
+          alpha = 1)+
   coord_sf(xlim = c(min(bbx[1,]), max(bbx[1,])), 
            ylim = c(min(bbx[2,]), max(bbx[2,])),
            expand = FALSE) +
   theme(legend.position = F) + theme_void()+
   theme(panel.background=
-          element_rect(fill = "#fcc41c"))
+          element_rect(fill = "#102e73"))
 final_map
 ```
 
+
 ```{r}
 ggsave(final_map, 
-       filename = "ny_map_art.png",
-       width = 20, 
-       height = 20, 
+       filename = "ny_map_art_2.png",
+       width = 19, 
+       height = 15, 
        units = "in",
        dpi = 500,
        type = "cairo")
 ```
+
+
 
