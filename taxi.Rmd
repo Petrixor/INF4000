@@ -18,6 +18,11 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(dplyr)
 library(arrow)
+library(purrr)
+library(lubridate)
+library(scales)
+library(tidyverse)
+library(data.table)
 ```
 
 ```{r}
@@ -54,3 +59,298 @@ taxi_22_10 <- read_parquet("yellow_tripdata_2022-10.parquet", as_data_frame = TR
 location_list <- read.csv("taxi+_zone_lookup.csv")
 ```
 
+```{r}
+taxi_19_1 %>% summarise(count = n())
+```
+
+```{r}
+ServiceList <-list(taxi_19_1, taxi_19_2, taxi_19_3, taxi_19_4,
+                   taxi_19_5, taxi_19_6, taxi_19_7, taxi_19_8,
+                   taxi_19_9, taxi_19_10, taxi_19_11, taxi_19_12)
+
+service_sum <- function(x) {
+  summarise(x, count = n())
+}
+
+FinalResult <- map(ServiceList, ~service_sum(.x))
+
+Service_19 <- bind_rows(FinalResult)
+```
+
+```{r}
+ServiceList2 <-list(taxi_22_1, taxi_22_2, taxi_22_3, taxi_22_4,
+                   taxi_22_5, taxi_22_6, taxi_22_7, taxi_22_8,
+                   taxi_22_9, taxi_22_10)
+
+FinalResult2 <- map(ServiceList2, ~service_sum(.x))
+
+Service_22 <- bind_rows(FinalResult2)
+```
+
+```{r}
+Service_19 <- Service_19 %>% mutate(month = 1:n())
+Service_22 <- Service_22 %>% mutate(month = 1:n())
+Service_19 <- Service_19 %>% mutate(year = 2019)
+Service_22 <- Service_22 %>% mutate(year = 2022)
+Service_join <- bind_rows(Service_19, Service_22)
+```
+
+```{r}
+options(scipen = 999)
+Service_graph <- ggplot(Service_join, aes(month, count, color = as.character(year))) +
+geom_line(size=2) + labs(color = "Year")+theme(panel.grid.major = element_blank(),
+                                               panel.grid.minor = element_blank(),plot.background=element_rect(fill ="transparent",colour = NA),
+                                               panel.background = element_rect(fill = alpha('black', .8)), legend.position = c(0.8, 0.07),
+  legend.direction = "horizontal",
+  legend.background = element_rect(fill = "black", color = NA),
+  legend.key = element_rect(color = "gray", fill = "black"),
+  legend.title = element_text(color = "white"),
+  legend.text = element_text(color = "white"),
+  axis.text.y = element_text(face="bold", color="#ff9419",size=10, angle=45),
+  axis.text.x = element_text(face="bold", color="#ff9419",size=10),
+  plot.title = element_text(color="red", size=16, face="bold"),
+axis.title.x = element_text(color="blue", size=14, face="bold"),
+axis.title.y = element_text(color="#993333", size=14, face="bold"))+scale_x_continuous(breaks= pretty_breaks())+scale_y_continuous(breaks = pretty_breaks())+labs(title = "Total Services Comparison")+xlab("Month")+ylab("Count")
+Service_graph
+```
+
+```{r}
+ggsave(Service_graph, file = "graph1.png", 
+       type = "cairo",  bg = "transparent",
+       width = 20, height = 15, units = "cm", dpi = 500)
+```
+
+```{r}
+blank <- ggplot() + theme_void()
+```
+
+```{r}
+ggsave(blank, file = "graph2.png", 
+       type = "cairo",
+       width = 420, height = 594, units = "mm", dpi = 500)
+```
+
+```{r}
+pick_up <- taxi_19_1 %>% group_by(PULocationID) %>% summarise(count = n())
+pick_up <- left_join(pick_up, location_list, by=c("PULocationID"="LocationID"))
+pick_up <- pick_up %>% mutate(alt_count = count/1000)
+pick_up
+```
+
+```{r}
+pick_up_sum <- function(x) {
+  x %>% group_by(PULocationID) %>% summarise(count = n())
+}
+```
+
+```{r}
+PickupResult <- map(ServiceList, ~pick_up_sum(.x))
+
+pick_up_19 <- PickupResult %>% bind_rows() %>% group_by(PULocationID) %>% summarise_all(sum)
+
+pick_up_19 <- left_join(pick_up_19, location_list, by=c("PULocationID"="LocationID"))
+pick_up_19 <- pick_up_19 %>% mutate(alt_count = count/10000)
+pick_up_19
+```
+
+```{r}
+PickupResult2 <- map(ServiceList2, ~pick_up_sum(.x))
+
+pick_up_22 <- PickupResult2 %>% bind_rows() %>% group_by(PULocationID) %>% summarise_all(sum)
+
+pick_up_22 <- left_join(pick_up_22, location_list, by=c("PULocationID"="LocationID"))
+pick_up_22 <- pick_up_22 %>% mutate(alt_count = count/10000)
+pick_up_22
+```
+
+
+```{r}
+pick_up_19 = pick_up_19 %>% arrange(Borough, alt_count)
+empty_bar <- 7
+to_add <- data.frame( matrix(NA, empty_bar*nlevels(pick_up_19$Borough), ncol(pick_up_19)) )
+colnames(to_add) <- colnames(pick_up_19)
+to_add$Borough <- rep(levels(pick_up_19$Borough), each=empty_bar)
+pick_up_19 <- rbind(pick_up_19, to_add)
+pick_up_19 <- pick_up_19 %>% arrange(Borough)
+pick_up_19$PULocationID <- seq(1, nrow(pick_up_19))
+
+label_data <- pick_up_19
+number_of_bar <- nrow(label_data)
+angle <- 90 - 360 * (label_data$PULocationID-0.5) /number_of_bar
+label_data$hjust <- ifelse( angle < -90, 1, 0)
+label_data$angle <- ifelse(angle < -90, angle+180, angle)
+
+
+```
+
+```{r}
+base_data <- pick_up_19 %>% 
+  group_by(Borough) %>% 
+  summarize(start=min(PULocationID), end=max(PULocationID)) %>% 
+  rowwise() %>% 
+  mutate(title=mean(c(start, end)))
+```
+
+
+
+```{r}
+p <- ggplot(pick_up_19, aes(x=as.factor(PULocationID), y=alt_count, fill=Borough)) +  
+  geom_bar(stat="identity", alpha=0.9) +
+  theme_minimal() + ylim(-200,350)+
+  theme(
+    legend.position = "none",
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm") 
+  ) +
+  coord_polar() + 
+  geom_text(data=label_data, aes(x=PULocationID, y=alt_count+10, label=Zone, hjust=hjust, color=Borough), fontface="bold",alpha=0.8, size=.8, angle= label_data$angle, inherit.aes = FALSE ) +
+  geom_segment(data=base_data, aes(x = start, y = -5, xend = end, yend = -5), colour = "#fff1de", alpha=0.8, size=0.6 , inherit.aes = FALSE )  +
+  geom_text(data=base_data, aes(x = title, y = -30, label=Borough, colour = Borough), alpha=0.8, size=3, fontface="bold", inherit.aes = FALSE)
+ 
+p
+```
+
+```{r}
+ggsave(p, 
+       filename = "test.png",
+       width = 15, 
+       height = 15, 
+       units = "in",
+       dpi = 500,
+       type = "cairo")
+```
+
+```{r}
+pick_up_22 = pick_up_22 %>% arrange(Borough, alt_count)
+empty_bar <- 7
+to_add_2 <- data.frame( matrix(NA, empty_bar*nlevels(pick_up_22$Borough), ncol(pick_up_22)) )
+colnames(to_add_2) <- colnames(pick_up_22)
+to_add_2$Borough <- rep(levels(pick_up_22$Borough), each=empty_bar)
+pick_up_22 <- rbind(pick_up_22, to_add_2)
+pick_up_22 <- pick_up_22 %>% arrange(Borough)
+pick_up_22$PULocationID <- seq(1, nrow(pick_up_22))
+
+label_data_2 <- pick_up_22
+number_of_bar_2 <- nrow(label_data_2)
+angle_2 <- 90 - 360 * (label_data_2$PULocationID-0.5) /number_of_bar_2
+label_data_2$hjust <- ifelse( angle_2 < -90, 1, 0)
+label_data_2$angle <- ifelse(angle_2 < -90, angle_2+180, angle_2)
+
+
+```
+
+```{r}
+base_data_2 <- pick_up_22 %>% 
+  group_by(Borough) %>% 
+  summarize(start=min(PULocationID), end=max(PULocationID)) %>% 
+  rowwise() %>% 
+  mutate(title=mean(c(start, end)))
+```
+
+
+
+```{r}
+p2 <- ggplot(pick_up_22, aes(x=as.factor(PULocationID), y=alt_count, fill=Borough)) +  
+  geom_bar(stat="identity", alpha=0.9) +
+  theme_minimal() + ylim(-200,350)+
+  theme(
+    legend.position = "none",
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm") 
+  ) +
+  coord_polar() + 
+  geom_text(data=label_data_2, aes(x=PULocationID, y=alt_count+10, label=Zone, hjust=hjust, color=Borough), fontface="bold",alpha=0.8, size=.8, angle= label_data_2$angle, inherit.aes = FALSE ) +
+  geom_segment(data=base_data_2, aes(x = start, y = -5, xend = end, yend = -5), colour = "#fff1de", alpha=0.8, size=0.6 , inherit.aes = FALSE )  +
+  geom_text(data=base_data_2, aes(x = title, y = -30, label=Borough, colour = Borough), alpha=0.8, size=3, fontface="bold", inherit.aes = FALSE)
+ 
+p2
+```
+
+```{r}
+ggsave(p2, 
+       filename = "test2.png",
+       width = 15, 
+       height = 15, 
+       units = "in",
+       dpi = 500,
+       type = "cairo")
+```
+
+
+```{r}
+drop_off_sum <- function(x) {
+  x %>% group_by(DOLocationID) %>% summarise(count = n())
+}
+```
+
+```{r}
+DropoffResult <- map(ServiceList, ~drop_off_sum(.x))
+
+drop_off_19 <- DropoffResult %>% bind_rows() %>% group_by(DOLocationID) %>% summarise_all(sum)
+
+drop_off_19 <- left_join(drop_off_19, location_list, by=c("DOLocationID"="LocationID"))
+drop_off_19 <- drop_off_19 %>% mutate(alt_count = count/10000)
+drop_off_19
+```
+
+```{r}
+drop_off_19 = drop_off_19 %>% arrange(Borough, alt_count)
+empty_bar <- 7
+to_add_3 <- data.frame( matrix(NA, empty_bar*nlevels(drop_off_19$Borough), ncol(drop_off_19)) )
+colnames(to_add_3) <- colnames(drop_off_19)
+to_add_3$Borough <- rep(levels(drop_off_19$Borough), each=empty_bar)
+drop_off_19 <- rbind(drop_off_19, to_add_3)
+drop_off_19 <- drop_off_19 %>% arrange(Borough)
+drop_off_19$DOLocationID <- seq(1, nrow(drop_off_19))
+
+label_data_3 <- drop_off_19
+number_of_bar_3 <- nrow(label_data_3)
+angle_3 <- 90 - 360 * (label_data_3$DOLocationID-0.5) /number_of_bar_3
+label_data_3$hjust <- ifelse( angle_3 < -90, 1, 0)
+label_data_3$angle <- ifelse(angle_3 < -90, angle_3+180, angle_3)
+
+
+```
+
+```{r}
+base_data_3 <- drop_off_19 %>% 
+  group_by(Borough) %>% 
+  summarize(start=min(DOLocationID), end=max(DOLocationID)) %>% 
+  rowwise() %>% 
+  mutate(title=mean(c(start, end)))
+```
+
+
+
+```{r}
+p3 <- ggplot(drop_off_19, aes(x=as.factor(DOLocationID), y=alt_count, fill=Borough)) +  
+  geom_bar(stat="identity", alpha=0.9) +
+  theme_minimal() + ylim(-200,370)+
+  theme(
+    legend.position = "none",
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm") 
+  ) +
+  coord_polar() + 
+  geom_text(data=label_data_3, aes(x=DOLocationID, y=alt_count+10, label=Zone, hjust=hjust, color=Borough), fontface="bold",alpha=0.8, size=.8, angle= label_data_3$angle, inherit.aes = FALSE ) +
+  geom_segment(data=base_data_3, aes(x = start, y = -5, xend = end, yend = -5), colour = "#fff1de", alpha=0.8, size=0.6 , inherit.aes = FALSE )  +
+  geom_text(data=base_data_3, aes(x = title, y = -30, label=Borough, colour = Borough), alpha=0.8, size=3, fontface="bold", inherit.aes = FALSE)
+ 
+p3
+```
+
+```{r}
+ggsave(p3, 
+       filename = "test3.png",
+       width = 15, 
+       height = 15, 
+       units = "in",
+       dpi = 500,
+       type = "cairo")
+```

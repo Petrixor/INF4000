@@ -1,0 +1,165 @@
+---
+title: "Image compositing"
+author: "Yuqi Gao"
+date: "2023-01-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages("magick")
+library(magick)
+```
+
+```{r}
+NYC <- image_read("ny_map_art_2.png")
+gc()
+```
+
+```{r}
+NYC1 <- image_annotate(NYC, "New York City", size = 400, gravity = "south", color = "#383838", font = "Trebuchet", location = "+5+2495")
+NYC1 <- image_annotate(NYC1, "2019/2022", size = 300, gravity = "south", color = "#383838", font = "Trebuchet", location = "+5+2195")
+NYC1 <- image_annotate(NYC1, "New York City", size = 400, gravity = "south", color = "#ff4b19", font = "Trebuchet", location = "+0+2500")
+NYC1 <- image_annotate(NYC1, "2019/2022", size = 300, gravity = "south", color = "#ff9419", font = "Trebuchet", location = "+0+2200")
+gc()
+```
+
+```{r}
+background <- image_read("graph2.png")
+plot1 <- image_read("graph1.png")
+gc()
+```
+
+```{r}
+background <- image_background(background,
+                                "#1A1A1A")
+compo1 <- image_composite(
+  image = background, 
+  composite_image = image_resize(NYC1,"8267"),gravity = "North")
+gc()
+```
+
+```{r}
+compo2 <- image_composite(
+  image = compo1, 
+  composite_image = image_resize(plot1,"3000"),offset = "+0+2900",gravity = "southwest")
+gc()
+```
+
+```{r}
+plot2 <- image_read("test.png")
+gc()
+```
+
+```{r}
+compo3 <- image_composite(
+  image = compo2, 
+  composite_image = image_resize(plot2,"5000x5000"),offset = "+1500+1000",gravity = "southeast")
+rm(compo1)
+gc()
+```
+
+```{r}
+plot3 <- image_read("test2.png")
+gc()
+```
+
+```{r}
+compo4 <- image_composite(
+  image = compo3, 
+  composite_image = image_resize(plot3,"5000x5000"),offset = "+4500+1000",gravity = "southwest")
+rm(compo2)
+gc()
+```
+
+```{r}
+plot4 <- image_read("test3.png")
+gc()
+```
+
+```{r}
+compo5 <- image_composite(
+  image = compo4, 
+  composite_image = image_resize(plot4,"4500x4500"),offset = "+800+8000",gravity = "northeast")
+rm(compo3)
+gc()
+```
+
+```{r}
+plot5 <- image_read("test4.png")
+gc()
+```
+
+```{r}
+compo6 <- image_composite(
+  image = compo5, 
+  composite_image = image_resize(plot5,"4500x4500"),offset = "+5000+8000",gravity = "northwest")
+rm(compo4)
+gc()
+```
+
+```{r}
+plot6 <- image_read("period.png")
+plot7 <- image_read("period2.png")
+gc()
+```
+
+```{r}
+compo7 <- image_composite(
+  image = compo6, 
+  composite_image = image_resize(plot6,"2000x2000"),offset = "+0+9000",gravity = "northwest")
+rm(compo5)
+gc()
+```
+
+```{r}
+compo8 <- image_composite(
+  image = compo7, 
+  composite_image = image_resize(plot7,"2000x2000"),offset = "+1800+9500",gravity = "northwest")
+rm(compo6)
+gc()
+```
+
+```{r}
+compo8 <- image_annotate(compo8, "2019", size = 200,gravity = "northwest", color = "#F18402", font = "Trebuchet", location = "+100+9000")
+gc()
+```
+
+```{r}
+compo8 <- image_annotate(compo8, "2022", size = 200,gravity = "northwest", color = "#00B4F3", font = "Trebuchet", location = "+1900+9600")
+gc()
+```
+
+```{r}
+compo8 <- image_annotate(compo8, "2019 Pick Up\n Location Trend", size = 100,gravity = "southeast", color = "#F7E9A7", font = "Trebuchet", location = "+3700+3400")
+gc()
+```
+
+```{r}
+compo8 <- image_annotate(compo8, "2022 Pick Up\n Location Trend", size = 100,gravity = "southeast", color = "#A7EEF7", font = "Trebuchet", location = "+970+3400")
+gc()
+```
+
+```{r}
+compo8 <- image_annotate(compo8, "2022 Drop Off\n Location Trend", size = 80,gravity = "southeast", color = "#F7E9A7", font = "Trebuchet", location = "+2800+1350")
+gc()
+```
+
+```{r}
+compo8 <- image_annotate(compo8, "2022 Drop Off\n Location Trend", size = 80,gravity = "southeast", color = "#A7EEF7", font = "Trebuchet", location = "+770+1350")
+gc()
+```
+
+```{r}
+compo8 <- image_annotate(compo8, "YELLOW CAB", size = 150, color = "#FFB900", boxcolor = "#663602",
+  degrees = -35, location = "+800+4500", gravity = "north")
+```
+
+```{r}
+image_write(compo8, path = "final.png", format = "png")
+```
+
+
